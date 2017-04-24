@@ -27,7 +27,7 @@
 #  -- Example
 #
 #   bash backup.sh parlamentojuvenil www.parlamento-juvenil.rj.gov.br parlamentojuvenil-production pgsql s3 falcon /home/forge/www.parlamento-juvenil.rj.gov.br/
-#
+#   bash backup.sh pragmarx backup.pragmarx.com backup-test pgsql s3 macbookpro /Users/antoniocarlos/code/pragmarx/backup
 
 NAMESPACE=$1
 
@@ -57,7 +57,7 @@ REMOTEPATH="/$NAMESPACE/$DOMAIN/databases/$DATABASE/$YEAR/$MONTH/$FILE"
 
 echo "Backuping and uploading to $REMOTEPATH..."
 
-/usr/bin/php $APP_PATH/artisan db:backup --database=$CONNECTION --destination=$DESTINATION --destinationPath=$REMOTEPATH --compression=gzip
+/usr/bin/php $APP_PATH/artisan db:backup --database=$CONNECTION --databaseName=$DATABASE --destination=$DESTINATION --destinationPath=$REMOTEPATH --compression=gzip
 
 echo
 echo "All DONE!"
