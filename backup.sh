@@ -49,21 +49,22 @@ YEAR="$(date +'%Y')"
 
 MONTH="$(date +'%m')"
 
-DAY="$(date +'%')"
+DAY="$(date +'%d')"
 
 NOW="$(date +'%Y-%m-%dT%H-%M-%S')"
 
-if [ "$TYPE"= "hourly" ]; then
+if [ "$TYPE" = "hourly" ]; then
+	FILE="$NAMESPACE.$DOMAIN.$DATABASE.$NOW.$CONNECTION.backup.sql"
 	REMOTEPATH="/backup/databases/$TYPE/$YEAR/$MONTH/$DAY/$FILE"
-	FILE="$NAMESPACE.$DOMAIN.$DATABASE.$NOW.$CONNECTION"
 else
-	REMOTEPATH="/backup/databases/$TYPE/"
-	FILE="$NAMESPACE.$DOMAIN.$DATABASE.$CONNECTION"
+	FILE="$NAMESPACE.$DOMAIN.$DATABASE.$CONNECTION.backup.sql"
+	REMOTEPATH="/backup/databases/$TYPE/$FILE"
 fi
 
-FILE="$FILE.backup.sql"
-
 LOCAL_PATH="/tmp/$FILE"
+
+echo $REMOTEPATH
+exit 0
 
 echo "Backuping and uploading to $REMOTEPATH..."
 
