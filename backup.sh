@@ -43,17 +43,27 @@ HOST=$6
 
 APP_PATH=$7
 
+TYPE=$8
+
 YEAR="$(date +'%Y')"
 
 MONTH="$(date +'%m')"
 
+DAY="$(date +'%')"
+
 NOW="$(date +'%Y-%m-%dT%H-%M-%S')"
 
-FILE="$HOST-$DOMAIN-$DATABASE-$NOW.$CONNECTION.backup"
+if [ "$TYPE"= "hourly" ]; then
+	REMOTEPATH="/backup/databases/$TYPE/$YEAR/$MONTH/$DAY/$FILE"
+	FILE="$NAMESPACE.$DOMAIN.$DATABASE.$NOW.$CONNECTION"
+else
+	REMOTEPATH="/backup/databases/$TYPE/"
+	FILE="$NAMESPACE.$DOMAIN.$DATABASE.$CONNECTION"
+fi
+
+FILE="$FILE.backup.sql"
 
 LOCAL_PATH="/tmp/$FILE"
-
-REMOTEPATH="/$NAMESPACE/$DOMAIN/databases/$DATABASE/$YEAR/$MONTH/$FILE"
 
 echo "Backuping and uploading to $REMOTEPATH..."
 
