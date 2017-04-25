@@ -63,9 +63,6 @@ fi
 
 LOCAL_PATH="/tmp/$FILE"
 
-echo $REMOTEPATH
-exit 0
-
 echo "Backuping and uploading to $REMOTEPATH..."
 
 /usr/bin/php $APP_PATH/artisan db:backup --database=$CONNECTION --databaseName=$DATABASE --destination=$DESTINATION --destinationPath=$REMOTEPATH --compression=gzip
