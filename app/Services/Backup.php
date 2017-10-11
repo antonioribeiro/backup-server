@@ -45,6 +45,8 @@ class Backup
             )
         ];
 
+        dd($destinations);
+
         $this->backupProcedure->run(
             $this->database['connection'],
             $destinations,
@@ -138,6 +140,9 @@ class Backup
             return false;
         }
 
-        Storage::disk($this->database['disk'])->move($this->remoteFilename.'.gz', $this->remoteFilenameOld);
+        if (Storage::disk($this->database['disk'])->exists($path = $this->remoteFilename.'.gz', $this->remoteFilenameOld))
+        {
+            Storage::disk($this->database['disk'])->move($path);
+        }
     }
 }
