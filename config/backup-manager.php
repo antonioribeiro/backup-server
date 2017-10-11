@@ -8,12 +8,12 @@ return [
 
     's3' => [
         'type'   => 'AwsS3',
-        'user'   => env('S3_USER'),
-        'key'    => env('S3_KEY'),
-        'secret' => env('S3_SECRET'),
-        'region' => env('S3_REGION'),
-        'bucket' => env('S3_BUCKET'),
-        'root'   => env('S3_ROOT'),
+        'user'   => env('AWS_USER'),
+        'key'    => env('AWS_KEY'),
+        'secret' => env('AWS_SECRET'),
+        'region' => env('AWS_REGION'),
+        'bucket' => env('AWS_BUCKET'),
+        'root'   => env('AWS_ROOT'),
     ],
 
     'gcs' => [
