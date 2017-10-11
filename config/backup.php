@@ -5,7 +5,7 @@ return [
     'databases' => [
 
         'parlamentojuvenil' => [
-            'cron' => '0 */4 * * *',
+            'cron' => '0 */4 * * *', // every 4 hours
             'namespace' => 'parlamentojuvenil',
             'domain' => 'www.parlamento-juvenil.rj.gov.br',
             'database' => 'parlamentojuvenil_20171005', //'parlamentojuvenil_production',

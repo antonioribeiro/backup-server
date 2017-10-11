@@ -69,24 +69,23 @@ class Backup
 
     public function executeAndKeepMany($db)
     {
-        $this->type = 'hourly';
-
-        $this->deletePrevious = false;
-
-        $this->database = $db;
-
-        $this->execute($this->database, false);
+        $this->executeAndKeep('hourly', $db, false);
     }
 
     public function executeAndKeepOne($db)
     {
-        $this->type = 'minutely';
+        $this->executeAndKeep('minutely', $db, true);
+    }
 
-        $this->deletePrevious = true;
+    public function executeAndKeep($type, $db, $keep)
+    {
+        $this->type = $type;
+
+        $this->deletePrevious = $keep;
 
         $this->database = $db;
 
-        $this->execute($this->database, true);
+        $this->execute();
     }
 
     private function makeFilename()
