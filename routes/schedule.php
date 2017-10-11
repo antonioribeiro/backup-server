@@ -14,5 +14,3 @@ foreach (config('backup.databases') as $database) {
         app(Backup::class)->executeAndKeepOne($database);
     })->everyThirtyMinutes();
 }
-
-app(Backup::class)->executeAndKeepOne($database);
