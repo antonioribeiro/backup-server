@@ -2,6 +2,10 @@
 
 return [
 
+    'local_disk' => 'backup', /// config/filesystems
+
+    'extension' => '.backup.sql',
+
     'databases' => [
 
         'parlamentojuvenil' => [

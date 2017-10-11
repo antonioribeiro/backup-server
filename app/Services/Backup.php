@@ -13,6 +13,8 @@ class Backup
 {
     protected $type;
 
+    protected $localFilename;
+
     protected $remoteFilename;
 
     protected $remoteFilenameOld;
@@ -24,7 +26,7 @@ class Backup
     /**
      * @param BackupProcedure $backupProcedure
      * @param DatabaseProvider $databases
-     * @param FilesystemProvider $filesystems
+®     * @param FilesystemProvider $filesystems
      */
     public function __construct(BackupProcedure $backupProcedure, DatabaseProvider $databases, FilesystemProvider $filesystems) {
         $this->backupProcedure = $backupProcedure;
@@ -38,8 +40,8 @@ class Backup
     {
         $destinations = [
             new Destination(
-                $this->database['disk'],
-                $this->remoteFilename
+                config('backup.local_disk'),
+                $this->localFilename
             )
         ];
 
@@ -51,6 +53,11 @@ class Backup
         );
     }
 
+    private function contentsHaveChaged()
+    {
+        return true;
+    }
+
     private function deleteOld()
     {
         Storage::disk($this->database['disk'])->delete($this->remoteFilenameOld);
@@ -60,11 +67,11 @@ class Backup
     {
         $this->makeFilename();
 
-        $this->renameToOld();
+        if ($this->contentsHaveChaged()) {
+            return $this->executeBackup();
+        }
 
-        $this->backup();
-
-        $this->deleteOld();
+        $this->deduplicate();
     }
 
     public function executeAndKeepMany($db)
@@ -88,6 +95,20 @@ class Backup
         $this->execute();
     }
 
+    /**
+     * @return bool
+     */
+    protected function executeBackup()
+    {
+        $this->renameToOld();
+
+        $this->backup();
+
+        $this->deleteOld();
+
+        return true;
+    }
+
     private function makeFilename()
     {
         $now = Carbon::now();
@@ -100,12 +121,15 @@ class Backup
 
         $day = $now->format('d');
 
+        $extension = config('backup.extension', 'backup.sql');
+
+        $this->localFilename = tempnam(sys_get_temp_dir(), 'backup_');
+
         $this->remoteFilename = $this->type == 'hourly'
-            ? "{$this->database['remote_path']}/{$this->type}/{$year}/{$month}/{$day}/{$this->database['namespace']}.{$this->database['domain']}.{$this->database['database']}.{$date}.{$this->database['connection']}.backup.sql"
-            : "{$this->database['remote_path']}/{$this->type}/{$this->database['namespace']}.{$this->database['domain']}.{$this->database['database']}.{$this->database['connection']}.backup.sql";
+            ? "{$this->database['remote_path']}/{$this->type}/{$year}/{$month}/{$day}/{$this->database['namespace']}.{$this->database['domain']}.{$this->database['database']}.{$date}.{$this->database['connection']}$extension"
+            : "{$this->database['remote_path']}/{$this->type}/{$this->database['namespace']}.{$this->database['domain']}.{$this->database['database']}.{$this->database['connection']}$extension";
 
         $this->remoteFilenameOld = "{$this->remoteFilename}.gz.$date";
-
     }
 
     private function renameToOld()
