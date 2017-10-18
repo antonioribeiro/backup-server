@@ -33,7 +33,7 @@ class Backup
     /**
      * @param BackupProcedure $backupProcedure
      * @param DatabaseProvider $databases
-®     * @param FilesystemProvider $filesystems
+     * @param FilesystemProvider $filesystems
      */
     public function __construct(BackupProcedure $backupProcedure, DatabaseProvider $databases, FilesystemProvider $filesystems) {
         $this->backupProcedure = $backupProcedure;
@@ -53,10 +53,10 @@ class Backup
         ];
 
         $this->backupProcedure->run(
-            $this->database['connection'],
+            $this->database('connection'),
             $destinations,
-            $this->database['compression'],
-            $this->database['database'] // databaseName
+            $this->database('compression'),
+            $this->database('database') // databaseName
         );
     }
 
@@ -70,18 +70,23 @@ class Backup
 
         $new->fill($backup->toArray());
 
-        $new->duplicate_backup_id = $backup->id;
+        $new->duplicate_of_id = $backup->id;
 
         $new->save();
 
         return $backup;
     }
 
+    private function database($key)
+    {
+        return array_get($this->database, $key);
+    }
+
     private function deDuplicate()
     {
-        $contents_sha1 = sha1_file($this->localFilename);
+        $contents_sha1 = $this->getSha1();
 
-        if ($backup = BackupModel::where('contents_sha1', $contents_sha1)->first()) {
+        if ($this->database('deduplicate') && $backup = BackupModel::where('contents_sha1', $contents_sha1)->first()) {
             return $this->createDeduplicatedCopy($backup);
         }
 
@@ -89,20 +94,49 @@ class Backup
             'filename' => $this->remoteFilename,
             'filename_sha1' => sha1($this->remoteFilename),
             'contents_sha1' => $contents_sha1,
-            'remote_url'  => $this->database['remote_path'],
-            'namespace' => $this->database['namespace'],
-            'domain' => $this->database['domain'],
-            'database' => $this->database['database'],
-            'connection' => $this->database['connection'],
-            'disk' => $this->database['disk'],
-            'server' => $this->database['server'],
+            'remote_url'  => $this->database('remote_path'),
+            'namespace' => $this->database('namespace'),
+            'domain' => $this->database('domain'),
+            'database' => $this->database('database'),
+            'connection' => $this->database('connection'),
+            'disk' => $this->database('disk'),
+            'server' => $this->database('server'),
             'remote_path' => $this->remoteFileUrl,
         ]);
     }
 
+    private function decompress($compressed)
+    {
+        if (!ends_with($compressed, '.gz')) {
+            return $compressed;
+        }
+
+        $decompressed = $compressed . '.decompressed';
+
+        // Raising this value may increase performance
+        $buffer_size = 4096; // read 4kb at a time
+
+        // Open our files (in binary mode)
+        $file = gzopen($compressed, 'rb');
+        $out_file = fopen($decompressed, 'wb');
+
+        // Keep repeating until the end of the input file
+        while (!gzeof($file)) {
+            // Read buffer-size bytes
+            // Both fwrite and gzread and binary-safe
+            fwrite($out_file, gzread($file, $buffer_size));
+        }
+
+        // Files are done, close files
+        fclose($out_file);
+        gzclose($file);
+
+        return $decompressed;
+    }
+
     private function deleteOld()
     {
-        Storage::disk($this->database['disk'])->delete($this->remoteFilenameOld);
+        Storage::disk($this->database('disk'))->delete($this->remoteFilenameOld);
     }
 
     protected function execute()
@@ -114,18 +148,16 @@ class Backup
         if (is_null(($backup = $this->deDuplicate())->duplicate_backup_id)) {
             $this->moveBackupToCloud();
         }
-
-
     }
 
-    public function executeAndKeepMany($db)
+    public function executeAndKeepAll($db, $key)
     {
-        $this->executeAndKeep('hourly', $db, false);
+        $this->executeAndKeep($key, $db, false);
     }
 
-    public function executeAndKeepOne($db)
+    public function executeAndKeepOne($db, $key)
     {
-        $this->executeAndKeep('minutely', $db, true);
+        $this->executeAndKeep($key, $db, true);
     }
 
     public function executeAndKeep($type, $db, $keep)
@@ -174,7 +206,7 @@ class Backup
 
     private function getBucketPath()
     {
-        if ($path = $this->getBackupManagerConfig('bucket', $this->database['disk'])) {
+        if ($path = $this->getBackupManagerConfig('bucket', $this->database('disk'))) {
             return $path;
         }
 
@@ -188,6 +220,22 @@ class Backup
         }
 
         return '';
+    }
+
+    /**
+     * @return string
+     */
+    private function getSha1()
+    {
+        $decompressed = $this->decompress($compressed = $this->localFilename);
+
+        $contents_sha1 = sha1_file($decompressed);
+
+        if ($decompressed !== $compressed) {
+            unlink($decompressed);
+        }
+
+        return $contents_sha1;
     }
 
     /**
@@ -228,23 +276,13 @@ class Backup
 
         $this->makeFilename($extension);
 
-        dump($this->filename);
-
         $this->makeLocalFilename();
-
-        dump($this->localFilename);
 
         $this->makeRemoteFilename($year, $month, $day, $date, $extension);
 
-        dump($this->remoteFilename);
-
         $this->makeRemoteFilenameOld($date);
 
-        dump($this->remoteFilenameOld);
-
-        $this->remoteFileUrl = Storage::disk($this->database['disk'])->url($this->remoteFilename);
-
-        dump($this->remoteFileUrl);
+        $this->makeRemoteFileUrl();
     }
 
     private function makeLocalFilename()
@@ -254,6 +292,13 @@ class Backup
             $this->getBackupManagerConfig('root') .
             DIRECTORY_SEPARATOR .
             $this->filename;
+    }
+
+    private function makeRemoteFileUrl()
+    {
+        $this->remoteFileUrl = Storage::disk($this->database('disk'))->url($this->getBucketPath() . $this->remoteFilename);
+
+        $this->remoteFileUrl = str_replace('//'.$this->getBucketPath().'.', '//', $this->remoteFileUrl);
     }
 
     /**
@@ -268,8 +313,8 @@ class Backup
         // --> /backup/databases/minutely/pragmarx.www.pragmarx.com.pragmarx.pgsql.backup.sql.gz
         $this->remoteFilename =
             $this->type == 'hourly'
-                ? $this->getBucketPath()."{$this->database['remote_path']}/{$this->type}/{$year}/{$month}/{$day}/{$this->database['namespace']}.{$this->database['domain']}.{$this->database['database']}.{$date}.{$this->database['connection']}$extension"
-                : $this->getBucketPath()."{$this->database['remote_path']}/{$this->type}/{$this->database['namespace']}.{$this->database['domain']}.{$this->database['database']}.{$this->database['connection']}$extension";
+                ? "{$this->database('remote_path')}/{$this->type}/{$year}/{$month}/{$day}/{$this->database('namespace')}.{$this->database('domain')}.{$this->database('database')}.{$date}.{$this->database('connection')}$extension"
+                : "{$this->database('remote_path')}/{$this->type}/{$this->database('namespace')}.{$this->database('domain')}.{$this->database('database')}.{$this->database('connection')}$extension";
     }
 
     /**
@@ -283,7 +328,7 @@ class Backup
 
     private function moveBackupToCloud()
     {
-        Storage::disk($this->database['disk'])->copy($this->localFilename, $this->remoteFilename);
+        Storage::disk($this->database('disk'))->put($this->remoteFilename, file_get_contents($this->localFilename));
 
         unlink($this->localFilename);
     }
@@ -294,9 +339,9 @@ class Backup
             return false;
         }
 
-        if (Storage::disk($disk = $this->database['disk'])->exists($path = $this->remoteFilename.'.gz', $this->remoteFilenameOld))
+        if (Storage::disk($disk = $this->database('disk'))->exists($this->remoteFilename))
         {
-            Storage::disk($disk)->move($path);
+            Storage::disk($disk)->move($this->remoteFilename, $this->remoteFilenameOld);
         }
     }
 }

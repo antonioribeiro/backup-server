@@ -28,6 +28,8 @@ class CreateBackupsTable extends Migration
             $table->string('server');
             $table->string('remote_path');
 
+            $table->integer('duplicate_of_id')->nullable()->unsigned();
+
             $table->timestamp('created_at')->index();
             $table->timestamp('updated_at');
         });

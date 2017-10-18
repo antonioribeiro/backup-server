@@ -6,13 +6,15 @@ use Illuminate\Console\Scheduling\Schedule;
 app(Schedule::class)->command('db:delete-gzip')->daily();
 
 foreach (config('backup.databases') as $database) {
-    app(Schedule::class)->call(function() use ($database) {
-        app(Backup::class)->executeAndKeepMany($database);
-    })->cron($database['cron']);
+    collect($database['schedule'])->each(function($schedule, $key) use ($database) {
+        $scheduleCommand = is_array($schedule['frequency']) ? $schedule['frequency'][0] : $schedule['frequency'];
 
-    app(Schedule::class)->call(function() use ($database) {
-        app(Backup::class)->executeAndKeepOne($database);
-    })->everyThirtyMinutes();
+        $parameter = isset($schedule['frequency'][1]) ? $schedule['frequency'][1] : null;
+
+        $keep = $schedule['keep'] == 'one' ? 'executeAndKeepOne' : 'executeAndKeepAll';
+
+        app(Schedule::class)->call(function() use ($database, $keep, $key) {
+            app(Backup::class)->{$keep}($database, $key);
+        })->{$scheduleCommand}($parameter);
+    });
 }
-
-app(Backup::class)->executeAndKeepOne($database);
