@@ -1,6 +1,11 @@
 <?php
 
 return [
+    'backup' => [
+        'type' => 'Local',
+        'root' => storage_path('backup'),
+    ],
+
     'local' => [
         'type' => 'Local',
         'root' => storage_path('app'),

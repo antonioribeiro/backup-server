@@ -8,17 +8,34 @@ return [
 
     'databases' => [
 
-        'parlamentojuvenil' => [
-            'cron' => '0 */4 * * *', // every 4 hours
-            'namespace' => 'parlamentojuvenil',
-            'domain' => 'www.parlamento-juvenil.rj.gov.br',
-            'database' => 'parlamentojuvenil_20171005', //'parlamentojuvenil_production',
+        'pragmarx' => [
+            'cron' => [
+                '0 */4 * * *', // every 4 hours
+            ],
+            'namespace' => 'pragmarx',
+            'domain' => 'www.pragmarx.com',
+            'database' => 'pragmarx', //'pragmarx_production',
             'connection' => 'pgsql',
             'disk' => 's3',
             'server' => 'db001',
             'remote_path' => '/backup/databases',
             'compression' => 'gzip',
         ],
+
+//        'parlamentojuvenil' => [
+//            'cron' => [
+//                '0 */4 * * *', // every 4 hours
+//            ],
+//            'namespace' => 'parlamentojuvenil',
+//            'domain' => 'www.parlamento-juvenil.rj.gov.br',
+//            'database' => 'parlamentojuvenil_20171005', //'parlamentojuvenil_production',
+//            'connection' => 'pgsql',
+//            'disk' => 's3',
+//            'server' => 'db001',
+//            'remote_path' => '/backup/databases',
+//            'compression' => 'gzip',
+//        ],
+
 //
 //        'bureau' => [
 //            'cron' => '5 */4 * * *',
